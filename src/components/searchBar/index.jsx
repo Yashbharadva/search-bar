@@ -117,16 +117,13 @@ const containerVariants = {
 
 const containerTransition = { type: "spring", damping: 22, stiffness: 150 };
 
-export function SearchBar(props) {
+export function SearchBar() {
   const [isExpanded, setExpanded] = useState(false);
-  const [parentRef, isClickedOutside] = useClickOutside();
   const inputRef = useRef();
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setLoading] = useState(false);
   const [tvShows, setTvShows] = useState([]);
   const [noTvShows, setNoTvShows] = useState(false);
-
-  const isEmpty = !tvShows || tvShows.length === 0;
 
   const changeHandler = (e) => {
     e.preventDefault();
@@ -139,21 +136,8 @@ export function SearchBar(props) {
     setExpanded(true);
   };
 
-  const collapseContainer = () => {
-    setExpanded(false);
-    setSearchQuery("");
-    setLoading(false);
-    setNoTvShows(false);
-    setTvShows([]);
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  useEffect(() => {
-    if (isClickedOutside) collapseContainer();
-  }, [isClickedOutside]);
-
   const prepareSearchQuery = (query) => {
-    const url = `http://api.tvmaze.com/search/shows?q=${query}`;
+    const url = `https://inquiry-ts.herokuapp.com/user/search-query?term=${query}`;
 
     return encodeURI(url);
   };
@@ -164,22 +148,24 @@ export function SearchBar(props) {
     setLoading(true);
     setNoTvShows(false);
 
-    const URL = prepareSearchQuery(searchQuery);
+    console.log(prepareSearchQuery(searchQuery));
 
-    const response = await axios.get(URL).catch((err) => {
+    const response = await axios.get(`https://inquiry-ts.herokuapp.com/user/search-query?term=${searchQuery}`, {
+      headers: {
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2FkZWRVc2VyIjp7ImlkIjoxLCJlbWFpbCI6InZhdHNhbHAudGNzQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidmF0c2FsMTkiLCJyb2xlIjoyLCJpc19hY3RpdmUiOnRydWUsInJlc2V0VG9rZW4iOm51bGwsInJlc2V0VG9rZW5FeHBpcmF0aW9uIjpudWxsLCJjcmVhdGVkQXQiOiIyMDIyLTA3LTExVDA1OjQ2OjA0LjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDIyLTA3LTExVDA1OjQ2OjE5LjAwMFoifSwiaWF0IjoxNjU4NDk3MjEzLCJleHAiOjE2NTkxMDIwMTN9.U2ApxPDs-aDfNyez3leHp3F7JcMMQc0EIGLDhN7RHnw`
+      }
+    }).catch((err) => {
       console.log("Error: ", err);
     });
+    console.log(response);
 
     if (response) {
-      console.log("Response: ", response.data);
-      if (response.data && response.data.length === 0) setNoTvShows(true);
-
-      setTvShows(response.data);
+      console.log("Response: ", response.data.data.rooms[0].title);
+      if (response.data) setNoTvShows(true);
+      setTvShows(response.data.data?.rooms);
     }
-
     setLoading(false);
   };
-
   useDebounce(searchQuery, 500, searchTvShow);
 
   return (
@@ -187,7 +173,6 @@ export function SearchBar(props) {
       animate={isExpanded ? "expanded" : "collapsed"}
       variants={containerVariants}
       transition={containerTransition}
-      ref={parentRef}
     >
       <SearchInputContainer>
         <SearchIcon>
@@ -207,7 +192,6 @@ export function SearchBar(props) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={collapseContainer}
               transition={{ duration: 0.2 }}
             >
               <IoClose />
@@ -218,29 +202,11 @@ export function SearchBar(props) {
       {isExpanded && <LineSeperator />}
       {isExpanded && (
         <SearchContent>
-          {isLoading && (
-            <LoadingWrapper>
-              <MoonLoader loading color="#000" size={20} />
-            </LoadingWrapper>
-          )}
-          {!isLoading && isEmpty && !noTvShows && (
-            <LoadingWrapper>
-              <WarningMessage>Start typing to Search</WarningMessage>
-            </LoadingWrapper>
-          )}
-          {!isLoading && noTvShows && (
-            <LoadingWrapper>
-              <WarningMessage>No Tv Shows or Series found!</WarningMessage>
-            </LoadingWrapper>
-          )}
-          {!isLoading && !isEmpty && (
+          {!isLoading && (
             <>
-              {tvShows.map(({ show }) => (
+              {tvShows.map((object) => (
                 <TvShow
-                  key={show.id}
-                  thumbanilSrc={show.image && show.image.medium}
-                  name={show.name}
-                  rating={show.rating && show.rating.average}
+                  name={object.title}
                 />
               ))}
             </>
